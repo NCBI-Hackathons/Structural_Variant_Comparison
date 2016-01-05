@@ -1,0 +1,5 @@
+hub dbVar_merge1
+shortLabel dbVar_merge
+longLabel identify regions of overlapping dbVar variants
+genomesFile genomes_dbVar_merge.txt
+email drtamermansour@gmail.com
