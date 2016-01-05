@@ -12,7 +12,8 @@ start, start and inner start (descending order)
 #TriLe
 
 # Yan 
-
+Generate the outputs from the merged data.
+Each variant call in the merged data was classified into different groups according to its variant type, copy number gain, copy number loss, deletion, etc. GVF files were generated for all the variant types. 
 # Yan
 
 # Jeff H
