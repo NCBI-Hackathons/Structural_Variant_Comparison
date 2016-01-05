@@ -1,0 +1,6 @@
+track dbVar_merge
+bigDataUrl BigWig/sample_gvf.bwig
+shortLabel dbVar_merge
+longLabel dbVar_merge
+type bigWig
+visibility dense
