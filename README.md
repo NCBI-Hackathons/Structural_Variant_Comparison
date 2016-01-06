@@ -11,4 +11,7 @@ gvf files for all variant types are in the server:
 bedgraph files for all variant types are here:
 /home/ubuntu/output_bedgraph
 
+gvf files for variant types by studies are stored here:
+/home/ubuntu/gvf_by_studies/by_studies
+
 
