@@ -6,6 +6,8 @@ https://docs.google.com/presentation/d/1n6WslYsnFPs74du63Y8hXgTj8PKH5b5V_QC9GqDH
 
 gvf files for all variant types are in the server:
 /home/ubuntu/output_gvf
+
+
 bedgraph files for all variant types are here:
 /home/ubuntu/output_bedgraph
 
