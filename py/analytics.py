@@ -13,10 +13,12 @@ import ConfigParser
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from bx.intervals.intersection import Intersecter, Interval
 import seaborn as sns
 
-from utils import copy_test
+from utils import (filter_by_number_of_hits2,
+        remove_singleton_exp_variants, 
+        copy_test,
+        reverse_dictionary)
 from generate_report import generate_report
 
 
@@ -95,11 +97,8 @@ def main():
     gpath = config.get('output', 'output_dir') 
     rpath = config.get('output', 'report_dir')
     df = pd.read_csv(gpath + 'sorted_info.txt', sep="\t", 
-            index_col=0)
+            index_col=0, nrows=400000)
     print('Data loaded')
-    study_dict = pickle.load(
-            open(gpath + 'study_id.dict', 'rb'))
-    print('**** study dict loaded ******')
     # Remove duplicated elements
     dfd = df.drop_duplicates(['chr', 
         'inner_start', 'start', 'outer_start', 
@@ -117,31 +116,34 @@ def main():
             (dfd.shape[0]))
     print('Number of records: {0}'.format(df.shape[0]))
     print(type_count)
-    fzd = fuzz_charterize(dfd)
-    fz = fuzz_charterize(df)
-    fuzz_out = pd.DataFrame({'all_counts': fz.summary['counts'],
-        'all_percent': fz.summary['var_percent'],
-        'unique_var_counts': fzd.summary['counts'], 
-        'unique_var_percent': fzd.summary['var_percent']},
-        index = fz.summary.index)
-    type_count.to_csv(rpath + 'type_count.txt', sep="\t")
-    fuzz_out.to_csv(rpath + 'fuzz_out.txt', sep="\t")
-    size_limit = config.get('params', 'size_limit')
-
+    report_dict['type_counts'] = type_count.to_html()
+    # Get params from file
+    size_limit = config.get('params', 'max_size')
+    nstudies = config.get('params', 'nstudies')
     new_unique_index = ['DSV{0!s}'.format(i) for i\
             in xrange(0, dfd.shape[0])]
-    dfd['uID'] = new_unique_index
+    dfd.loc[:,'uID'] = new_unique_index
+    print('new index created')
     # Copy number test
+    outdf, udf = filter_by_number_of_hits2(dfd, df, nstudies=2,
+            max_size = size_limit)
+    #cnv = copy_test(dfd)
+    #cnv = cnv.ix[cnv.size <= size_limit, :]
+    groups = udf.groupby('var_type')
+    from plot import plot_dists
+    for name, group in groups:
+        plot_dists(group.sstop - group.sstart, name,
+                rpath)
 
-    outdf = filter_by_number_of_hits(dfd, df, nstudies=2)
-    cnv = copy_test(dfd)
-    cnv = cnv.ix[cnv.size <= size_limit, :]
-
-
-    fig, ax = plt.subplots()
     generate_report(report_dict)
-    embed()
-
+    study_dict = pickle.load(
+            open(gpath + 'dict_test.txt', 'rb'))
+    sdict = reverse_dictionary(study_dict)
+    print('**** study dict loaded ******')
+    gs = remove_singleton_exp_variants(outdf, sdict,
+            nstudies)
+    filtered_data = udf.ix[gs.values,:]
+    filtered_data.to_csv(gpath + 'filtered_all.txt')
 
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-#/bin/bash/
+#!/usr/bin/env python
 '''
 This script is for collecting and merging variant based on a given study id
 Usage:
@@ -6,6 +6,7 @@ Usage:
     -output (default is merged_data.txt)
 '''
 
+from os import system
 import gzip
 import glob
 import pickle
@@ -41,20 +42,22 @@ def read_file(file1,save):
                 save.write('\t'.join([col[0],col[2],col[7],col[9],col[10],col[11],col[12],col[13],col[14],col[45]])+'\n')
 
 def main():
-    output_file = get_data('-output',str,'merged_data.txt')
+    system('mkdir merge_data')
     
     all_study_id = []
     for name in database:
         name = name.split('/')[-1].split('_')[0]
-        all_study_id.append(name)
+        if name not in all_study_id:
+            all_study_id.append(name)
 
-    input_study_id = get_data('-id',list,all_study_id)
-    
-    save = open(output_file,'w')
-    for study_id in input_study_id:
+    for study_id in all_study_id:
+        print 'reading study',study_id
+        output_file = 'merge_data/'+study_id+'.txt'
+        save = open(output_file,'w')
+        save.write('#accession_num\tvar_type\tchr\touter_start\tstart\tinner_start\tinner_stop\tstop\touter_stop\tremap_alignment\n')
         file_in_study = glob.glob('/data/dbVar/Homo_Sapiens/by_study/'+study_id+'*/tab/*variant_call.*.germline.tab.gz')
         for file1 in file_in_study:
             read_file(file1,save)
-    save.close()
+        save.close()
 
 main()
