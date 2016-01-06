@@ -4,7 +4,7 @@ statistics.
 NCBI hackathon dbVar group 2016
 """
 
-import glob
+import pickle
 import pandas as pd
 import numpy as np
 from IPython import embed
@@ -43,6 +43,10 @@ def main():
         'inner_start', 'start', 'outer_start', 
         'inner_stop', 'stop', 'outer_start'],
         inplace=False)
+    type_count = dfd.groupby('var_type').agg(lambda x:
+    x.shape[0]).loc[['var_type']]
+    var_percent = type_count/float(dfd.shape[0])*100
+    type_count['var_percent'] = var_percent
     diff = df.shape[0] - dfd.shape[0]
     print('Number of exact duplicate entries: {0}'.
             format(diff))
