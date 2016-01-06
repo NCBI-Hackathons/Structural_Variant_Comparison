@@ -1,5 +1,5 @@
 track dbVar_merge
-bigDataUrl BigWig/sample_gvf.bwig
+bigDataUrl BigWig/copy_number_gain_dbVar.bwig
 shortLabel dbVar_merge
 longLabel dbVar_merge
 type bigWig

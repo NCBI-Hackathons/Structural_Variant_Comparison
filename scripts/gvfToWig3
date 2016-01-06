@@ -1,0 +1,29 @@
+#!/usr/bin/awk -f
+#
+# Convert genePred file to a bed file (on stdout) #
+BEGIN {
+FS="[\t;]";
+#OFS="\t";
+OFS=" "; }
+{
+seqid=$1
+#source=$2 
+#type=$3 
+start=$4-1 
+end=$5 
+#score=$6 
+#strand=$7 
+#phase=$8
+ID=$9
+delete count
+split($10, count, "=");
+nf_list=$11
+f_list=$12
+
+if (count[2]>0) {
+len=end-start
+print "variableStep", "chrom="seqid, "span="len
+print start, count[2];}
+
+}
+
