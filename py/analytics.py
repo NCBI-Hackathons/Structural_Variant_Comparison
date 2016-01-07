@@ -9,16 +9,19 @@ import pandas as pd
 import numpy as np
 from IPython import embed
 import ConfigParser
+import multiprocessing as mp
 
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from utils import (filter_by_number_of_hits2,
+from utils import (
+        filter_by_size,
         remove_singleton_exp_variants, 
-        copy_test,
-        reverse_dictionary)
+        reverse_dictionary,
+        generate_unique_mapping
+        )
 from generate_report import generate_report
 
 
@@ -59,12 +62,6 @@ def collide_intervals(df, fz):
     return(collision)
 
 
-def study_chracterize(df):
-    """
-    """
-    pass
-
-
 def pca_fig(rpath):
     fig, ax = plt.subplots()
     ax.scatter([0,2], [2,6,])
@@ -96,54 +93,83 @@ def main():
     report_dict = {}
     gpath = config.get('output', 'output_dir') 
     rpath = config.get('output', 'report_dir')
-    df = pd.read_csv(gpath + 'sorted_info.txt', sep="\t", 
-            index_col=0, nrows=400000)
-    print('Data loaded')
+    reader = pd.read_csv(gpath + 'sorted_info.txt', sep="\t", 
+            index_col=0, chunksize=500000)
+    pool = mp.Pool(4)
+
+    # Begin filtering
+    size_limit = config.get('params', 'max_size')
+    nstudies = config.get('params', 'nstudies')
     # Remove duplicated elements
-    dfd = df.drop_duplicates(['chr', 
+    filtered = []
+    func_list = []
+    for df in reader:
+        f = pool.apply_async(filter_by_size, [df], 
+                {'max_size':size_limit})
+        func_list.append(f)
+    for f in func_list:
+        filtered.append(f.get(timeout = 1600))
+
+    df = pd.concat(func_list)
+    print(df.shape)
+
+
+    dfd = df.drop_duplicates(['chr', 'var_type',
         'inner_start', 'start', 'outer_start', 
         'inner_stop', 'stop', 'outer_start'],
         inplace=False)
-    type_count = dfd.groupby('var_type').agg(lambda x:
-            x.shape[0]).loc[:, ['chr']]
-    var_percent = type_count.ix[:,0]/float(dfd.shape[0])*100
-    type_count['var_percent'] = var_percent
-    diff = df.shape[0] - dfd.shape[0]
-    #tree = Intersecter()
-    print('Number of exact duplicate entries: {0}'.
-            format(diff))
-    print('Unique variant entries: {0}'.format
-            (dfd.shape[0]))
-    print('Number of records: {0}'.format(df.shape[0]))
-    print(type_count)
-    report_dict['type_counts'] = type_count.to_html()
-    # Get params from file
-    size_limit = config.get('params', 'max_size')
-    nstudies = config.get('params', 'nstudies')
     new_unique_index = ['DSV{0!s}'.format(i) for i\
             in xrange(0, dfd.shape[0])]
     dfd.loc[:,'uID'] = new_unique_index
     print('new index created')
-    # Copy number test
-    outdf, udf = filter_by_number_of_hits2(dfd, df, nstudies=2,
-            max_size = size_limit)
+
+
+    # Filter by size 
+    print('beginning filtering')
+    '''
+    try:
+        # Try to load first
+        dfd=pd.read_pickle(gpath + 'drop_duplicats_size.pkl')
+        df=pd.read_pickle(gpath + 'full_size.pkl')
+        print('read pickle')
+    except IOError:
+        dfd = filter_by_size(dfd, max_size=size_limit)
+        df = filter_by_size(df, max_size=size_limit)
+        dfd.to_pickle(gpath + 'drop_duplicats_size.pkl')
+        df.to_pickle(gpath + 'full_size.pkl')
+    '''
+    # Save intermediate files for now 
+    dfd.to_pickle(gpath + 'drop_duplicats_size.pkl')
+    df.to_pickle(gpath + 'full_size.pkl')
+
+    print('finished filtering')
+    df = generate_unique_mapping(dfd, df, nstudies=2)
     #cnv = copy_test(dfd)
     #cnv = cnv.ix[cnv.size <= size_limit, :]
-    groups = udf.groupby('var_type')
-    from plot import plot_dists
-    for name, group in groups:
-        plot_dists(group.sstop - group.sstart, name,
-                rpath)
-
-    generate_report(report_dict)
     study_dict = pickle.load(
             open(gpath + 'dict_test.txt', 'rb'))
     sdict = reverse_dictionary(study_dict)
     print('**** study dict loaded ******')
-    gs = remove_singleton_exp_variants(outdf, sdict,
+    gs, sl = remove_singleton_exp_variants(df, sdict,
             nstudies)
-    filtered_data = udf.ix[gs.values,:]
+    embed()
+    filtered_data = dfd.ix[gs.values,:]
     filtered_data.to_csv(gpath + 'filtered_all.txt')
+
+    # Begin report generation
+    groups = dfd.groupby('var_type')
+    from plot import plot_dists
+    for name, group in groups:
+        plot_dists(group.sstop - group.sstart, name,
+                rpath)
+    generate_report(report_dict)
+    type_count = dfd.groupby('var_type').agg(lambda x:
+            x.shape[0]).loc[:, ['chr']]
+    var_percent = type_count.ix[:,0]/float(dfd.shape[0])*100
+    type_count['var_percent'] = var_percent
+    print(type_count)
+    report_dict['type_counts'] = type_count.to_html()
+    # Get params from file
 
 
 if __name__ == '__main__':

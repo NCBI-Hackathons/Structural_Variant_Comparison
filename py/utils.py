@@ -50,37 +50,27 @@ def fuzzy_diff(df):
     return(df)
 
 
-def filter_by_number_of_hits2(udf, df, 
-        ncollisions=3, nstudies=2, max_size=3e6):
+def filter_by_size(df, max_size=3e6):
+    '''
+    '''
+    df = fuzzy_ends(df)
+    diff = (df.sstop - df.sstart)
+    df = df.ix[diff < float(max_size), :]
+    return(df)
+
+
+def generate_unique_mapping(udf, df, 
+        ncollisions=3, nstudies=2):
     ''' Exact matching by sstop and sstart
     '''
-    print('starting size filtering')
-    udf = fuzzy_ends(udf)
-    diff = (udf.sstop - udf.sstart)
-    udf = udf.ix[diff < float(max_size), :]
-    print('flitered unique')
-    df = fuzzy_ends(df)
-    diff_full = (df.sstop - df.sstart)
-    df = df.ix[diff_full < float(max_size),:]
-    print('finished filtering')
     hits_uids = []
     comp_dict = {}
     for _, j in udf.iterrows():
         comp_dict[(j['chr'], j.sstart, j.sstop)] = j.uID
-    print('finished generating uID dictionary')
     for _, j in df.iterrows():
         hits_uids.append(comp_dict[(j['chr'],j.sstart, j.sstop)])
-        '''
-        matches = ((udf.sstart == j.sstart) &
-                (udf.sstop == j.sstop))
-        match_ids = udf.ix[matches, 'uID']
-        if len(match_ids):
-            hits_uids.append(list(match_ids.values)[0])
-        else:
-            hits_uids.append(list(match_ids.values)[0])
-        '''
     df['uID'] = hits_uids
-    return(df, udf)
+    return(df)
 
 
 def reverse_dictionary(dictionary):
@@ -98,16 +88,19 @@ def remove_singleton_exp_variants(df, study_dict,
     ugroups = df.groupby('uID')
     more_than_one = []
     uid_index = []
+    study_list = []
     for name, group in ugroups:
         studies = [study_dict[i] for i in group.index]
+        study_list.extend(studies)
         studies = set(studies)
         uid_index.append(name)
-        if len(studies) > nstudies:
+        if len(studies) >= nstudies:
             more_than_one.append(True)
+            print('Yes')
         else:
             more_than_one.append(False)
-    out_s = pd.Index(more_than_one, index = uid_index)
-    return(out_s)
+    out_s = pd.Series(more_than_one, index = uid_index)
+    return(out_s, study_list)
 
 
 
