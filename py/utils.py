@@ -13,14 +13,10 @@ def fuzzy_ends(df):
     df.loc[:,'sstart'] =  sstart
     tdf = df.loc[:, ['outer_stop', 'stop','inner_stop']]
     sstop = tdf.apply(np.max, axis=1)
-
     df.loc[:, 'sstop'] = sstop
     return(df)
 
 
-
-
-    
 
 def fuzzy_diff(df):
     """ This was the third try for this, still
@@ -67,8 +63,12 @@ def generate_unique_mapping(udf, df,
     comp_dict = {}
     for _, j in udf.iterrows():
         comp_dict[(j['chr'], j.sstart, j.sstop)] = j.uID
+
     for _, j in df.iterrows():
-        hits_uids.append(comp_dict[(j['chr'],j.sstart, j.sstop)])
+        try:
+            hits_uids.append(comp_dict[(j['chr'],j.sstart, j.sstop)])
+        except KeyError:
+            embed()
     df['uID'] = hits_uids
     return(df)
 
@@ -86,6 +86,7 @@ def remove_singleton_exp_variants(df, study_dict,
     """
     """
     ugroups = df.groupby('uID')
+    
     more_than_one = []
     uid_index = []
     study_list = []
@@ -113,5 +114,4 @@ def copy_test(df):
            ( df['var_type'] == 'copy number variation'))
     # append together
     cnv = df.ix[dfg, :]
-    #cnv['size'] = cnv.sstop - cnv.sstart
     return(cnv) 

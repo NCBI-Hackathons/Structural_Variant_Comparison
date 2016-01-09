@@ -4,7 +4,7 @@ statistics.
 NCBI hackathon dbVar group 2016
 """
 
-import pickle
+import pickle, sys
 import pandas as pd
 import numpy as np
 from IPython import embed
@@ -85,6 +85,10 @@ def fuzz_charterize(df):
     by_type.columns = ['counts', 'var_percent']
     fd = FuzzyData(fz, summary=by_type)
     return(fd)
+
+
+def report_generation():
+    pass
  
 
 def main(): 
@@ -98,8 +102,7 @@ def main():
     pool = mp.Pool(4)
 
     # Begin filtering
-    size_limit = config.get('params', 'max_size')
-    nstudies = config.get('params', 'nstudies')
+    size_limit = config.getfloat('params', 'max_size')
     # Remove duplicated elements
     filtered = []
     func_list = []
@@ -110,10 +113,8 @@ def main():
     for f in func_list:
         filtered.append(f.get(timeout = 1600))
 
-    df = pd.concat(func_list)
+    df = pd.concat(filtered)
     print(df.shape)
-
-
     dfd = df.drop_duplicates(['chr', 'var_type',
         'inner_start', 'start', 'outer_start', 
         'inner_stop', 'stop', 'outer_start'],
@@ -122,8 +123,6 @@ def main():
             in xrange(0, dfd.shape[0])]
     dfd.loc[:,'uID'] = new_unique_index
     print('new index created')
-
-
     # Filter by size 
     print('beginning filtering')
     '''
@@ -142,8 +141,17 @@ def main():
     dfd.to_pickle(gpath + 'drop_duplicats_size.pkl')
     df.to_pickle(gpath + 'full_size.pkl')
 
-    print('finished filtering')
+
+def study_filtering():
+    config = ConfigParser.RawConfigParser()
+    config.read('../example.cfg')
+    gpath = config.get('output', 'output_dir') 
+    nstudies = config.get('params', 'nstudies')
+    df = pd.read_pickle(gpath + 'full_size.pkl')
+    embed()
+    dfd = pd.read_pickle(gpath + 'drop_duplicats_size.pkl')
     df = generate_unique_mapping(dfd, df, nstudies=2)
+    print('begin filtering by study')
     #cnv = copy_test(dfd)
     #cnv = cnv.ix[cnv.size <= size_limit, :]
     study_dict = pickle.load(
@@ -152,10 +160,11 @@ def main():
     print('**** study dict loaded ******')
     gs, sl = remove_singleton_exp_variants(df, sdict,
             nstudies)
-    embed()
     filtered_data = dfd.ix[gs.values,:]
     filtered_data.to_csv(gpath + 'filtered_all.txt')
 
+
+def reports():
     # Begin report generation
     groups = dfd.groupby('var_type')
     from plot import plot_dists
@@ -173,4 +182,10 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if sys.argv[1]=='main':
+        main()
+    elif sys.argv[1] == 'temp': 
+        study_filtering()
+    else:
+        pass
+
