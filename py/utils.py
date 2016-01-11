@@ -10,10 +10,10 @@ from IPython import embed
 def fuzzy_ends(df):
     tdf = df.loc[:, ['outer_start', 'start','inner_start']]
     sstart = tdf.apply(np.min, axis=1)
-    df.loc[:,'sstart'] =  sstart
+    df.loc[:,'sstart'] =  sstart.astype(np.int32)
     tdf = df.loc[:, ['outer_stop', 'stop','inner_stop']]
     sstop = tdf.apply(np.max, axis=1)
-    df.loc[:, 'sstop'] = sstop
+    df.loc[:, 'sstop'] = sstop.astype(np.int32)
     return(df)
 
 
@@ -62,13 +62,27 @@ def generate_unique_mapping(udf, df,
     hits_uids = []
     comp_dict = {}
     for _, j in udf.iterrows():
-        comp_dict[(j['chr'], j.sstart, j.sstop)] = j.uID
+        comp_dict[(j['chr'], j['var_type'],
+            j.sstart, j.sstop)] = j.uID
 
     for _, j in df.iterrows():
         try:
-            hits_uids.append(comp_dict[(j['chr'],j.sstart, j.sstop)])
+            hits_uids.append(comp_dict[(j['chr'],
+                 j['var_type'],
+                j.sstart, j.sstop)])
         except KeyError:
+            # there shouldn't bee any key errors
+            '''
+            qstring = ('sstart >= {0} & '
+                    'sstop <= {1} & '
+                    'chr == {2}'
+                    'var_type == {3}'
+                    )
+            qtest = udf.query(qstring.format(j.sstart, 
+                j.sstop, j.chr))
             embed()
+            '''
+            pass
     df['uID'] = hits_uids
     return(df)
 
