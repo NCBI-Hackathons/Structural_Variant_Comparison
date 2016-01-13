@@ -71,7 +71,7 @@ def generate_unique_mapping(udf, df,
                  j['var_type'],
                 j.sstart, j.sstop)])
         except KeyError:
-            # there shouldn't bee any key errors
+            # there shouldn't be any key errors
             '''
             qstring = ('sstart >= {0} & '
                     'sstop <= {1} & '
@@ -82,6 +82,7 @@ def generate_unique_mapping(udf, df,
                 j.sstop, j.chr))
             embed()
             '''
+            print('KeyError generate_unique_mapping')
             pass
     df['uID'] = hits_uids
     return(df)
@@ -99,19 +100,19 @@ def remove_singleton_exp_variants(df, study_dict,
         nstudies=2):
     """
     """
-    ugroups = df.groupby('uID')
-    
     more_than_one = []
     uid_index = []
     study_list = []
+    ugroups = df.groupby('uID')
     for name, group in ugroups:
+        print('working on {0}'.format(name))
         studies = [study_dict[i] for i in group.index]
         study_list.extend(studies)
         studies = set(studies)
+        print(len(studies))
         uid_index.append(name)
         if len(studies) >= nstudies:
             more_than_one.append(True)
-            print('Yes')
         else:
             more_than_one.append(False)
     out_s = pd.Series(more_than_one, index = uid_index)

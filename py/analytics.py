@@ -4,6 +4,7 @@ statistics.
 NCBI hackathon dbVar group 2016
 """
 
+import warnings
 import pickle, sys
 import pandas as pd
 import numpy as np
@@ -24,6 +25,8 @@ from utils import (
         )
 from generate_report import generate_report
 
+warnings.filterwarnings("ignore", category=matplotlib.UserWarning)
+
 
 
 class FuzzyData(object):
@@ -43,12 +46,6 @@ class FuzzyData(object):
         fig.savefig(rpath + 'fuzz_kdeplot.png')
 
 
-
-
-def pca_fig(rpath):
-    fig, ax = plt.subplots()
-    ax.scatter([0,2], [2,6,])
-    fig.savefig(rpath + 'test.png')
 
 
 
@@ -96,6 +93,7 @@ def main():
 
 
 def study_filtering():
+    import timeit
     config = ConfigParser.RawConfigParser()
     config.read('../example.cfg')
     gpath = config.get('output', 'output_dir') 
@@ -108,10 +106,14 @@ def study_filtering():
             open(gpath + 'dict_test.txt', 'rb'))
     sdict = reverse_dictionary(study_dict)
     print('**** study dict loaded ******')
+    start = timeit.default_timer()
     gs, sl = remove_singleton_exp_variants(df, sdict,
             nstudies)
+    stop = timeit.default_timer()
+    print('Time to run: {0!s}'.foramt(stop - start))
     filtered_data = dfd.ix[gs.values,:]
     filtered_data.to_csv(gpath + 'filtered_all.txt')
+    embed()
 
 
 def reports():
