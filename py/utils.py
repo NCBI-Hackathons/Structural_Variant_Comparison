@@ -2,9 +2,10 @@
 """ 
 import numpy as np
 import pandas as pd
-from bx.intervals.intersection import Intersecter, Interval
-from collections import defaultdict
+#from bx.intervals.intersection import Intersecter, Interval
 from IPython import embed
+import numba
+
 
 
 def fuzzy_ends(df):
@@ -94,6 +95,27 @@ def reverse_dictionary(dictionary):
         for k in j:
             new_dict[k] = i
     return(new_dict)
+
+
+@numba.jit
+def groupby_study_numba(index, value, output, 
+        nstudies = 2, gold_standard = None):
+    """
+    gold_standard - alist of studies with variants that 
+    will be ignored when checking for singletons
+    """
+    # Need to avoid dictionaries for numba 
+    sl = np.zeros(len(output), dtype='|S200')
+    for i in range(index.shape[0]):
+        sl[index[i]] += value[i] + ','
+    z = np.char.count(sl, ',')
+    return(z >= nstudies)
+    
+
+
+
+
+        
         
 
 def remove_singleton_exp_variants(df, study_dict,
@@ -104,12 +126,11 @@ def remove_singleton_exp_variants(df, study_dict,
     uid_index = []
     study_list = []
     ugroups = df.groupby('uID')
+    # Not sure why this isn't working
     for name, group in ugroups:
-        print('working on {0}'.format(name))
         studies = [study_dict[i] for i in group.index]
         study_list.extend(studies)
         studies = set(studies)
-        print(len(studies))
         uid_index.append(name)
         if len(studies) >= nstudies:
             more_than_one.append(True)

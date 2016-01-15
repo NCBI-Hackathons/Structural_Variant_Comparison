@@ -21,11 +21,12 @@ from utils import (
         filter_by_size,
         remove_singleton_exp_variants, 
         reverse_dictionary,
-        generate_unique_mapping
+        generate_unique_mapping,
+        groupby_study_numba,
         )
 from generate_report import generate_report
 
-warnings.filterwarnings("ignore", category=matplotlib.UserWarning)
+#warnings.filterwarnings("ignore", category=matplotlib.UserWarning)
 
 
 
@@ -56,11 +57,9 @@ def main():
     config.read('../example.cfg')
     report_dict = {}
     gpath = config.get('output', 'output_dir') 
-    rpath = config.get('output', 'report_dir')
     reader = pd.read_csv(gpath + 'sorted_info.txt', sep="\t", 
             index_col=0, chunksize=500000)
     pool = mp.Pool(4)
-
     # Begin filtering
     size_limit = config.getfloat('params', 'max_size')
     # Remove duplicated elements
@@ -74,6 +73,9 @@ def main():
         filtered.append(f.get(timeout = 1600))
     df = pd.concat(filtered)
     print(df.shape)
+    # :TODO if sstart and sstop are the same, no
+    # matter if it was originally annotated as inner_start
+    # or inner stop it will be collapsed
     '''
     dfd = df.drop_duplicates(['chr', 'var_type',
         'inner_start', 'start', 'outer_start', 
@@ -83,54 +85,60 @@ def main():
     # For now since, for w/e reason
     dfd = df.drop_duplicates(['chr', 'var_type',
         'sstart', 'sstop'])
-    new_unique_index = ['DSV{0!s}'.format(i) for i\
-            in xrange(0, dfd.shape[0])]
+    new_unique_index = np.arange(dfd.shape[0])
     dfd.loc[:,'uID'] = new_unique_index
     print('new index created')
     # Save intermediate files for now 
+    df = generate_unique_mapping(dfd, df, nstudies=2)
     dfd.to_pickle(gpath + 'drop_duplicats_size.pkl')
     df.to_pickle(gpath + 'full_size.pkl')
 
 
 def study_filtering():
     import timeit
+    report_dict = {}
     config = ConfigParser.RawConfigParser()
     config.read('../example.cfg')
     gpath = config.get('output', 'output_dir') 
-    nstudies = config.get('params', 'nstudies')
+    rpath = config.get('output', 'report_dir')
+    nstudies = config.getint('params', 'nstudies')
     df = pd.read_pickle(gpath + 'full_size.pkl')
     dfd = pd.read_pickle(gpath + 'drop_duplicats_size.pkl')
-    df = generate_unique_mapping(dfd, df, nstudies=2)
     print('begin filtering by study')
     study_dict = pickle.load(
             open(gpath + 'dict_test.txt', 'rb'))
     sdict = reverse_dictionary(study_dict)
     print('**** study dict loaded ******')
+    s1 = np.array([sdict[i] for i in df.index], dtype='|S20')
     start = timeit.default_timer()
-    gs, sl = remove_singleton_exp_variants(df, sdict,
-            nstudies)
+    output = np.zeros(dfd.uID.shape[0], dtype=bool)
+    std_filter = groupby_study_numba(df.uID.values, s1, 
+            output, nstudies=nstudies) 
     stop = timeit.default_timer()
-    print('Time to run: {0!s}'.foramt(stop - start))
-    filtered_data = dfd.ix[gs.values,:]
-    filtered_data.to_csv(gpath + 'filtered_all.txt')
-    embed()
-
-
-def reports():
-    # Begin report generation
+    print(np.sum(std_filter))
+    dfd = dfd.ix[std_filter,:]
+    df = df.ix[df.uID.isin(dfd.uID),:]
+    dfd.to_csv(gpath + 'filtered_no_dupes.txt', sep="\t")
+    df.to_csv(gpath + 'study_filtered_all.txt', sep="\t")
+    print('Time to run: {0!s}'.format(stop - start))
     groups = dfd.groupby('var_type')
     from plot import plot_dists
+    generate_report(report_dict)
     for name, group in groups:
         plot_dists(group.sstop - group.sstart, name,
                 rpath)
-    generate_report(report_dict)
     type_count = dfd.groupby('var_type').agg(lambda x:
             x.shape[0]).loc[:, ['chr']]
     var_percent = type_count.ix[:,0]/float(dfd.shape[0])*100
     type_count['var_percent'] = var_percent
-    print(type_count)
-    report_dict['type_counts'] = type_count.to_html()
-    # Get params from file
+    type_count.round(2)
+    report_dict['var_type_pivot'] = type_count.to_html()
+    report_dict['studies'] = []
+    report_dict['var_types'] = [name for name, _ in groups]
+    generate_report(report_dict)
+
+
+
 
 
 if __name__ == '__main__':
