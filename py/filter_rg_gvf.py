@@ -132,7 +132,6 @@ def main():
 	except OSError:
 		print 'Overwrite files in directory:',output_dir
         filtered_data = open('/'.join([output_dir,'filtered_data.gvf']),'w')
-        filtered_data.write('chr\tdbVar\ttype\tstart\tend\t.\t.\t.\tinfo\n')
 	#Filter
         print '\nFiltering...'
 	for data in database:

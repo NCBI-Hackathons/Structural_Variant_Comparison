@@ -1,0 +1,20 @@
+<html>
+<head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css">
+</head>
+<body>
+<h1> dbVar summary </h1>
+{{ var_type_pivot }}
+<h2> Variation Types</h2>
+<h3> Size distribution by type</h3>
+{% for var_type in var_types %}
+<img src='./{{var_type}}_size_distribution.png' />
+<br />
+{% endfor %}
+
+<h2> Study Statistics </h2>
+{% for study in studies %}
+{% endfor %}
+<h2> Unique Features </h2>
+</body>
+</html>
