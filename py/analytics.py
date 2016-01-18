@@ -1,14 +1,14 @@
+#!/usr/bin/env python
 """ Load in the dbVar data and output summary
 statistics.
 
 NCBI hackathon dbVar group 2016
 """
 
-import warnings
+import timeit, glob
 import pickle, sys
 import pandas as pd
 import numpy as np
-from IPython import embed
 import ConfigParser
 import multiprocessing as mp
 
@@ -19,88 +19,113 @@ import seaborn as sns
 
 from utils import (
         filter_by_size,
-        remove_singleton_exp_variants, 
         reverse_dictionary,
         generate_unique_mapping,
         groupby_study_numba,
+        generate_unique_mapping_numba,
         )
 from generate_report import generate_report
 
-#warnings.filterwarnings("ignore", category=matplotlib.UserWarning)
+from IPython import embed
 
 
-
-class FuzzyData(object):
-    """
-    """
-    def __init__(self, data, summary=None):
-        self.data = data
-        self.summary = summary
-
-    def plot_histogram(self, rpath):
-        fig, ax = plt.subplots()
-        diff = (self.data.inner_start - 
-                self.data.outer_start)
-        ax = sns.kdeplot(diff)
-        print(diff.mean())
-        print(min(diff), max(diff))
-        fig.savefig(rpath + 'fuzz_kdeplot.png')
-
-
-
-
+def append_p(study, x):
+    study = study.split("/")[-1].rstrip(".txt")
+    s=np.array([study for i in range(x.shape[0])], dtype='|S10')
+    x.loc[:,'study'] = s
+    return(x)
 
 
 
 def main(): 
     config = ConfigParser.RawConfigParser()
     config.read('../example.cfg')
-    report_dict = {}
     gpath = config.get('output', 'output_dir') 
-    reader = pd.read_csv(gpath + 'sorted_info.txt', sep="\t", 
-            index_col=0, chunksize=500000)
-    pool = mp.Pool(4)
-    # Begin filtering
     size_limit = config.getfloat('params', 'max_size')
-    # Remove duplicated elements
+    files = glob.glob("/home/ubuntu/gvf_by_studies/tab/*.txt")
+    studies_include = config.get('params', 'studies_include')
+    studies_exclude = config.get('params', 'studies_exclude').split(",")
+    if studies_include == '' or studies_include == None:
+        studies_include = []
+    else:
+        studies_include = studies_include.split(",")
     filtered = []
-    func_list = []
-    for df in reader:
-        f = pool.apply_async(filter_by_size, [df], 
-                {'max_size':size_limit})
-        func_list.append(f)
-    for f in func_list:
-        filtered.append(f.get(timeout = 1600))
+    start = timeit.default_timer()
+    pool = mp.Pool(8)
+    files = files[0:10]
+    studies = [i.split("/")[-1].rstrip(".txt") for i in files]
+    for i in files:
+        study = i.split("/")[-1].rstrip(".txt")
+        if study in studies_exclude: pass
+        else:
+            if (len(studies_include) == 0) or (study in studies_include):
+                print('yeah')
+                reader = pd.read_csv(i, sep="\t", 
+                        index_col=0, dtype={'chr':'S5'})
+                pool.apply_async(filter_by_size, [reader, study],
+                        {'max_size': size_limit},
+                        callback = lambda x: filtered.append(x))
+            else: pass
+    # Remove duplicated elements
+    ###### Step takes around 7 minutes ###################
+    pool.close()
+    pool.join()
     df = pd.concat(filtered)
-    print(df.shape)
+    stop = timeit.default_timer()
+    print('Time to load in files and parse: {0!s}'.format(stop-start))
+    p_studies = set(df.study)
+    non_passed = []
+    for i in studies:
+        if i not in p_studies:
+            non_passed.append(i)
+    print('Studies that had no variants that did not pass size filtering:{0}'.format("\t".join(non_passed)))
+    ############## HACK for now until we find out what is going on #
+    df = df.ix[np.logical_not(df.index.duplicated()),:]
     # :TODO if sstart and sstop are the same, no
     # matter if it was originally annotated as inner_start
     # or inner stop it will be collapsed
-    '''
+    # For now since, ignore fuzzy 
     dfd = df.drop_duplicates(['chr', 'var_type',
-        'inner_start', 'start', 'outer_start', 
-        'inner_stop', 'stop', 'outer_start'],
-        inplace=False)
-    '''
-    # For now since, for w/e reason
-    dfd = df.drop_duplicates(['chr', 'var_type',
-        'sstart', 'sstop'])
+        'sstart', 'sstop'], inplace=False)
     new_unique_index = np.arange(dfd.shape[0])
     dfd.loc[:,'uID'] = new_unique_index
     print('new index created')
-    # Save intermediate files for now 
-    df = generate_unique_mapping(dfd, df, nstudies=2)
-    dfd.to_pickle(gpath + 'drop_duplicats_size.pkl')
-    df.to_pickle(gpath + 'full_size.pkl')
+    # This step takes forever
+    start = timeit.default_timer()
+    groups = df.groupby('chr')
+    unique_mapping = []
+    pool = mp.Pool(8)
+    for name, group in groups:
+        pool.apply_async(generate_unique_mapping,
+                args = (dfd.ix[dfd.chr == name,:], group),  
+                callback=lambda x: unique_mapping.append(x))
+        '''
+        tgroup = dfd.ix[dfd['chr'] == name,]
+        pool.apply_async(generate_unique_mapping_numba,
+                args = (group.sstart.values, 
+                    group.sstop.values, 
+                    tgroup.sstart.values, 
+                    tgroup.sstop.values, 
+                    tgroup.index.values),
+                callback=lambda x: unique_mapping.append(pd.Series(x,
+                    index = group.index)))
+        '''
+    pool.close()
+    pool.join()
+    ns = pd.concat(unique_mapping)
+    stop = timeit.default_timer()
+    embed()
+    print('Time to generate mapping: {0!s}'.format((stop-start)))
+    df['uID'] = ns
 
 
 def study_filtering():
-    import timeit
     report_dict = {}
     config = ConfigParser.RawConfigParser()
     config.read('../example.cfg')
     gpath = config.get('output', 'output_dir') 
     rpath = config.get('output', 'report_dir')
+    vartype_f = config.('params', 'var_type')
     nstudies = config.getint('params', 'nstudies')
     df = pd.read_pickle(gpath + 'full_size.pkl')
     dfd = pd.read_pickle(gpath + 'drop_duplicats_size.pkl')
@@ -131,7 +156,7 @@ def study_filtering():
             x.shape[0]).loc[:, ['chr']]
     var_percent = type_count.ix[:,0]/float(dfd.shape[0])*100
     type_count['var_percent'] = var_percent
-    type_count.round(2)
+    type_count['var_percent'].round(2)
     report_dict['var_type_pivot'] = type_count.to_html()
     report_dict['studies'] = []
     report_dict['var_types'] = [name for name, _ in groups]

@@ -23,7 +23,6 @@ def VariantCallTabReader(filepath, chrom_size):
 
     """
     infile = pd.read_csv(filepath, sep="\t")
-    
     # var_types is a dic keyed by var_type and valued by a list of genomic intervals
     var_types_ga = {}
     for _, line in infile.iterrows():
@@ -43,7 +42,8 @@ def VariantCallTabReader(filepath, chrom_size):
             var_types_ga[var_type].append(iv)
     return(var_types_ga)
 
-def write_to_gvf(ga,var_type, outfile):
+
+def write_to_gvf(ga, var_type, outfile):
     """
     ga is the genomic array.
     """
@@ -64,7 +64,7 @@ def write_to_gvf(ga,var_type, outfile):
         ID = str(i+1)
         count = ivs[i][1]
         attributes = 'ID='+ID+';'+'count='+str(count)
-        outline =chrom+'\t'+source+'\t'+var_type+'\t'+str(start)+'\t'+str(end)+'\t'+score+'\t'+strand+'\t'+phase+'\t'+attributes+'\n'
+        outline = chrom+'\t'+source+'\t'+var_type+'\t'+str(start)+'\t'+str(end)+'\t'+score+'\t'+strand+'\t'+phase+'\t'+attributes+'\n'
         outfile.write(outline)
     outfile.close()
 
@@ -90,7 +90,7 @@ def main(argv):
     chrom_size_file.close()
 
 
-    var_types_ga = VariantCallTabReader(opt.variantfile,chrom_size)
+    var_types_ga = VariantCallTabReader(opt.variantfile, chrom_size)
     for var_type in var_types_ga.keys():  
         # Creat a 'Genomic Array' using HTSeq package
         ga = HTSeq.GenomicArray( chrom_size, stranded=False, typecode="i" )
@@ -111,7 +111,7 @@ def main(argv):
         ga.write_bedgraph_file(bedgraph, strand=".", track_options="")
     
         gvf = opt.outdir+'/VarType='+var_type+'_dbVar.gvf'
-        write_to_gvf(ga,var_type,gvf)
+        write_to_gvf(ga, var_type, gvf)
 
 if __name__ == "__main__":
     main(sys.argv)

@@ -1,100 +1,29 @@
-""" Pass
+""" Utility functions for filtering
 """ 
 import numpy as np
 import pandas as pd
-#from bx.intervals.intersection import Intersecter, Interval
-from IPython import embed
+from bx.intervals.intersection import Intersecter, Interval
 import numba
 
 
-
 def fuzzy_ends(df):
-    tdf = df.loc[:, ['outer_start', 'start','inner_start']]
-    sstart = tdf.apply(np.min, axis=1)
-    df.loc[:,'sstart'] =  sstart.astype(np.int32)
-    tdf = df.loc[:, ['outer_stop', 'stop','inner_stop']]
-    sstop = tdf.apply(np.max, axis=1)
+    sstart = df.loc[:, ['outer_start', 'start','inner_start']].apply(np.min,
+            axis=1)
+    sstop = df.loc[:, ['outer_stop', 'stop','inner_stop']].apply(np.max, axis=1)
     df.loc[:, 'sstop'] = sstop.astype(np.int32)
+    df.loc[:, 'sstart'] =  sstart.astype(np.int32)
     return(df)
 
 
-
-def fuzzy_diff(df):
-    """ This was the third try for this, still
-    very slow. 
-    """
-    sstart = np.zeros(df.shape[0], dtype=np.int64)
-    sstop = np.zeros(df.shape[0], dtype=np.int64)
-    enum = 0
-    for _, j in df.iterrows():
-        if not pd.isnull(j['outer_start']):
-            sstart[enum] = j['outer_start']
-        else:
-            try:
-                sstart[enum] = j['start']
-            except ValueError:
-                sstart[enum] = j['inner_start']
-        if not pd.isnull(j['outer_stop']):
-            sstop[enum] = j['outer_stop']
-        else:
-            try:
-                sstop[enum] = j['stop']
-            except ValueError:
-                sstop[enum] = j['inner_stop']
-        enum += 1
-    df.loc[:,'sstart'] =  sstart
-    df.loc[:,'sstop'] = sstop
-    return(df)
-
-
-def filter_by_size(df, max_size=3e6):
+def filter_by_size(df, study, max_size=3e6):
     '''
     '''
     df = fuzzy_ends(df)
     diff = (df.sstop - df.sstart)
+    s = np.repeat(study ,df.shape[0]).astype('|S10')
     df = df.ix[diff < float(max_size), :]
+    df['study'] = s
     return(df)
-
-
-def generate_unique_mapping(udf, df, 
-        ncollisions=3, nstudies=2):
-    ''' Exact matching by sstop and sstart
-    '''
-    hits_uids = []
-    comp_dict = {}
-    for _, j in udf.iterrows():
-        comp_dict[(j['chr'], j['var_type'],
-            j.sstart, j.sstop)] = j.uID
-
-    for _, j in df.iterrows():
-        try:
-            hits_uids.append(comp_dict[(j['chr'],
-                 j['var_type'],
-                j.sstart, j.sstop)])
-        except KeyError:
-            # there shouldn't be any key errors
-            '''
-            qstring = ('sstart >= {0} & '
-                    'sstop <= {1} & '
-                    'chr == {2}'
-                    'var_type == {3}'
-                    )
-            qtest = udf.query(qstring.format(j.sstart, 
-                j.sstop, j.chr))
-            embed()
-            '''
-            print('KeyError generate_unique_mapping')
-            pass
-    df['uID'] = hits_uids
-    return(df)
-
-
-def reverse_dictionary(dictionary):
-    new_dict = {}
-    for i, j in dictionary.iteritems():
-        for k in j:
-            new_dict[k] = i
-    return(new_dict)
 
 
 @numba.jit
@@ -110,14 +39,62 @@ def groupby_study_numba(index, value, output,
         sl[index[i]] += value[i] + ','
     z = np.char.count(sl, ',')
     return(z >= nstudies)
+
+
+@numba.jit
+def generate_unique_mapping_numba(df_st, df_sp, udf_st,
+        udf_sp, dfd_nix):
+    """  
+    df_st - full dataframe singular start
+    df_sp - full dataframe singular stop
+    """
+    n = len(df_st)
+    un = len(dfd_nix)
+    out_index = np.zeros(n, dtype=np.int32)
+    # Maybe use interval tree here and do it in cython?
+    ci = 0
+    for i in range(n):
+        for j in range(ci, un):
+            if (df_st[i] == udf_st[j]) and (df_sp[i] == udf_sp[j]):
+                out_index[i] = dfd_nix[j]
+                # Just to be safe, assume sorted
+                ci = j - 4
+                break
+            else:pass
+    return(out_index)
+
+
+
+def generate_unique_mapping(udf, df):
+    ''' Exact matching by sstop and sstart
+    '''
+    hits_uids = []
+    comp_dict = {}
+    for _, j in udf.iterrows():
+        comp_dict[(j['chr'], j['var_type'],
+            j.sstart, j.sstop)] = j.uID
+
+    for _, j in df.iterrows():
+        try:
+            hits_uids.append(comp_dict[(j['chr'],
+                 j['var_type'],
+                j.sstart, j.sstop)])
+        except KeyError:
+            # there shouldn't be any key errors
+            print('KeyError generate_unique_mapping')
+            pass
+    #df.loc[:, 'uID'] = hits_uids
+    return(pd.Series(hits_uids, index=df.index))
+
+
+def reverse_dictionary(dictionary):
+    new_dict = {}
+    for i, j in dictionary.iteritems():
+        for k in j:
+            new_dict[k] = i
+    return(new_dict)
+
     
-
-
-
-
-        
-        
-
 def remove_singleton_exp_variants(df, study_dict,
         nstudies=2):
     """
@@ -138,6 +115,12 @@ def remove_singleton_exp_variants(df, study_dict,
             more_than_one.append(False)
     out_s = pd.Series(more_than_one, index = uid_index)
     return(out_s, study_list)
+
+
+def fuzzy_matches(df, stop):
+    """
+    """
+    pass
 
 
 
