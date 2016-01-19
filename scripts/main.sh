@@ -1,9 +1,17 @@
 
 ## convert gvf to wig
 cd scripts
-bash gvfToWig.sh ../gvf/VarType\=copy_number_gain_dbVar.gvf ../wig/copy_number_gain_dbVar.wig 
-bash gvfToWig_v2.sh ../gvf/VarType\=copy_number_gain_dbVar.gvf ../wig/copy_number_gain_dbVar.wig2
-bash gvfToWig_v3.sh ../gvf/VarType\=copy_number_gain_dbVar.gvf ../wig/copy_number_gain_dbVar.wig3
+#bash gvfToWig.sh ../gvf/VarType\=copy_number_gain_dbVar.gvf ../wig/copy_number_gain_dbVar.wig 
+#bash gvfToWig_v2.sh ../gvf/VarType\=copy_number_gain_dbVar.gvf ../wig/copy_number_gain_dbVar.wig2
+for dir in ../gvf_by_studies/by_studies/*;do 
+  expName=$(basename $dir)
+  for f in $dir/*.gvf;do
+    varName=$(basename $f)
+    output=$expName.${varName%.gvf}.wig
+    echo $output
+    bash gvfToWig.sh $f ../wig/$output
+  done
+done
 
 ## create UCSC track hub
 cd ../

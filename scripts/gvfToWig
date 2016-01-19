@@ -4,28 +4,26 @@
 BEGIN {
 FS="[\t;]";
 #OFS="\t";
-OFS=" "; 
-startid=""; }
+OFS=" "; }
 {
 seqid=$1
-source=$2 
-type=$3 
+#source=$2 
+#type=$3 
 start=$4-1 
 end=$5 
-score=$6 
-strand=$7 
-phase=$8
+#score=$6 
+#strand=$7 
+#phase=$8
 ID=$9
 delete count
 split($10, count, "=");
 nf_list=$11
 f_list=$12
-if (seqid!=startid) {
-print "variableStep", "chrom="seqid, "span=50"
-startid=seqid
-}
-for (i = start; i <= end; i=i+50) {
-print i, count[2];}
+
+if (count[2]>0) {
+len=end-start
+print "variableStep", "chrom="seqid, "span="len
+print start, count[2];}
 
 }
 
