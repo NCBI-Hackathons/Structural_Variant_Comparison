@@ -1,10 +1,4 @@
 #!/usr/bin/env python
-'''
-This script is for collecting and merging variant based on a given study id
-Usage:
-    -id [id1 id2 ...] study id
-    -output (default is merged_data.txt)
-'''
 
 from os import system
 import gzip
@@ -38,8 +32,9 @@ def read_file(file1,save):
     for Line in file1:
         if Line[0]!='#':
             col = Line.split('\t')
-            if col[6]=='GRCh38':
+            if col[6]=='GRCh38' and col[8]=='':
                 save.write('\t'.join([col[0],col[2],col[7],col[9],col[10],col[11],col[12],col[13],col[14],col[45]])+'\n')
+
 
 def main():
     system('mkdir merge_data')

@@ -39,13 +39,13 @@ def append_p(study, x):
 
 def main(): 
     config = ConfigParser.RawConfigParser()
-    config.read('../example.cfg')
-    gpath = config.get('output', 'output_dir') 
+    config.read(sys.argv[1])
+    gpath = config.get('input', 'make_ref') 
     size_limit = config.getfloat('params', 'max_size')
-    files = glob.glob("/home/ubuntu/gvf_by_studies/tab/*.txt")
+    files = glob.glob(gpath + "tab/*.txt")
     studies_include = config.get('params', 'studies_include')
     studies_exclude = config.get('params', 'studies_exclude').split(",")
-    vartype_f = config.('params', 'var_type')
+    vartype_f = config.get('params', 'var_type')
     if studies_include == '' or studies_include == None:
         studies_include = []
     else:
@@ -53,7 +53,7 @@ def main():
     filtered = []
     start = timeit.default_timer()
     pool = mp.Pool(8)
-    files = files[0:10]
+    files = files[0:20]
     studies = [i.split("/")[-1].rstrip(".txt") for i in files]
     for i in files:
         study = i.split("/")[-1].rstrip(".txt")
@@ -168,10 +168,5 @@ def study_filtering():
 
 
 if __name__ == '__main__':
-    if sys.argv[1]=='main':
-        main()
-    elif sys.argv[1] == 'temp': 
-        study_filtering()
-    else:
-        pass
+    main()
 
