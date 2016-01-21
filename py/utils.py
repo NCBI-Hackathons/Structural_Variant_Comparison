@@ -21,8 +21,8 @@ def filter_by_size(df, study, max_size=3e6):
     df = fuzzy_ends(df)
     diff = (df.sstop - df.sstart)
     s = np.repeat(study ,df.shape[0]).astype('|S10')
-    df = df.ix[diff < float(max_size), :]
-    df['study'] = s
+    df = df.loc[diff < float(max_size), :]
+    df.loc[:, 'study'] = s
     return(df)
 
 

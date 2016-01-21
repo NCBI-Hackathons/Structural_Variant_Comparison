@@ -51,7 +51,7 @@ def write_to_gvf(ga,var_type, outfile):
     outfile = open(outfile, 'w')
     ivs = list(ga.steps())
     num_iv = len(ivs)
-    outline = '##gvf-version 1.00'
+    outline = '##gvf-version 1.00\n'
     outfile.write(outline)
     
     source = 'dbVar'

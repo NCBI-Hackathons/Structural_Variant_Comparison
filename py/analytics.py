@@ -6,16 +6,16 @@ NCBI hackathon dbVar group 2016
 """
 
 import timeit, glob
-import pickle, sys
+import sys
+import multiprocessing as mp
+import ConfigParser
+
 import pandas as pd
 import numpy as np
-import ConfigParser
-import multiprocessing as mp
-
 import matplotlib
+import seaborn as sns
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 from utils import (
         filter_by_size,
@@ -27,13 +27,6 @@ from utils import (
 from generate_report import generate_report
 
 from IPython import embed
-
-
-def append_p(study, x):
-    study = study.split("/")[-1].rstrip(".txt")
-    s=np.array([study for i in range(x.shape[0])], dtype='|S10')
-    x.loc[:,'study'] = s
-    return(x)
 
 
 
@@ -53,14 +46,13 @@ def main():
     filtered = []
     start = timeit.default_timer()
     pool = mp.Pool(8)
-    files = files[0:20]
+    files = files
     studies = [i.split("/")[-1].rstrip(".txt") for i in files]
     for i in files:
         study = i.split("/")[-1].rstrip(".txt")
         if study in studies_exclude: pass
         else:
             if (len(studies_include) == 0) or (study in studies_include):
-                print('yeah')
                 reader = pd.read_csv(i, sep="\t", 
                         index_col=0, dtype={'chr':'S5'})
                 pool.apply_async(filter_by_size, [reader, study],
@@ -80,8 +72,13 @@ def main():
     for i in studies:
         if i not in p_studies:
             non_passed.append(i)
-    print('Studies that had no variants that did not pass size filtering:{0}'.format("\t".join(non_passed)))
+    print(('Studies that had no variants that did '
+         'not pass size filtering:{0}').format("\t".join(non_passed)))
     ############## HACK for now until we find out what is going on #
+    # Get rid of the contigs for now
+    df = df.ix[df.contig.isnull(), :]
+    # The GRc37 to 38 multiple mapping isn't resolved need to discuss how to 
+    # deal with this
     df = df.ix[np.logical_not(df.index.duplicated()),:]
     # :TODO if sstart and sstop are the same, no
     # matter if it was originally annotated as inner_start
@@ -116,29 +113,14 @@ def main():
     pool.join()
     ns = pd.concat(unique_mapping)
     stop = timeit.default_timer()
-    embed()
     print('Time to generate mapping: {0!s}'.format((stop-start)))
     df['uID'] = ns
-
-
-def study_filtering():
     report_dict = {}
-    config = ConfigParser.RawConfigParser()
-    config.read('../example.cfg')
-    gpath = config.get('output', 'output_dir') 
-    rpath = config.get('output', 'report_dir')
     nstudies = config.getint('params', 'nstudies')
-    df = pd.read_pickle(gpath + 'full_size.pkl')
-    dfd = pd.read_pickle(gpath + 'drop_duplicats_size.pkl')
-    print('begin filtering by study')
-    study_dict = pickle.load(
-            open(gpath + 'dict_test.txt', 'rb'))
-    sdict = reverse_dictionary(study_dict)
-    print('**** study dict loaded ******')
-    s1 = np.array([sdict[i] for i in df.index], dtype='|S20')
     start = timeit.default_timer()
     output = np.zeros(dfd.uID.shape[0], dtype=bool)
-    std_filter = groupby_study_numba(df.uID.values, s1, 
+    embed()
+    std_filter = groupby_study_numba(df.uID.values, df.study, 
             output, nstudies=nstudies) 
     stop = timeit.default_timer()
     print(np.sum(std_filter))
@@ -150,6 +132,7 @@ def study_filtering():
     groups = dfd.groupby('var_type')
     from plot import plot_dists
     generate_report(report_dict)
+    rpath = config.get('output', 'report_dir')
     for name, group in groups:
         plot_dists(group.sstop - group.sstart, name,
                 rpath)
