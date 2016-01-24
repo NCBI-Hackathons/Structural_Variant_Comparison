@@ -12,10 +12,6 @@ import ConfigParser
 
 import pandas as pd
 import numpy as np
-import matplotlib
-import seaborn as sns
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 
 from utils import (
         filter_by_size,
@@ -46,7 +42,7 @@ def main():
     filtered = []
     start = timeit.default_timer()
     pool = mp.Pool(8)
-    files = files
+    files = files[0:20]
     studies = [i.split("/")[-1].rstrip(".txt") for i in files]
     for i in files:
         study = i.split("/")[-1].rstrip(".txt")
@@ -112,7 +108,6 @@ def main():
     pool.close()
     pool.join()
     ns = pd.concat(unique_mapping)
-    stop = timeit.default_timer()
     print('Time to generate mapping: {0!s}'.format((stop-start)))
     df['uID'] = ns
     report_dict = {}
@@ -122,7 +117,6 @@ def main():
     embed()
     std_filter = groupby_study_numba(df.uID.values, df.study, 
             output, nstudies=nstudies) 
-    stop = timeit.default_timer()
     print(np.sum(std_filter))
     dfd = dfd.ix[std_filter,:]
     df = df.ix[df.uID.isin(dfd.uID),:]

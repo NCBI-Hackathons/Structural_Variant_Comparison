@@ -6,7 +6,8 @@ import time
 import glob
 
 #database = ['VarType=complex_dbVar.gvf']
-database = glob.glob('/home/ubuntu/gvf_by_studies/by_studies/nstd112/*.gvf')
+#database = glob.glob('/home/ubuntu/gvf_by_studies/by_studies/*/*.gvf')
+database = glob.glob('/home/ubuntu/output_gvf/*.gvf')
 config_header_filter = 'filter'
 
 def get_parameter(key_word,data_type,default):

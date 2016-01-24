@@ -1,5 +1,4 @@
 import matplotlib
-
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -16,9 +15,5 @@ def plot_dists(dist, var_type, path):
             format(var_type=var_type)))
     except:
         pass
-
-
-
-
 
 

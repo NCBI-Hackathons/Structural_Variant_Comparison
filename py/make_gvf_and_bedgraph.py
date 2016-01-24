@@ -44,6 +44,7 @@ def VariantCallTabReader(filepath, chrom_size):
             var_types_ga[var_type].append(iv)
     return(var_types_ga)
 
+
 def write_to_gvf(ga,var_type, outfile):
     """
     ga is the genomic array.
