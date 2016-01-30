@@ -27,14 +27,18 @@ def VariantCallTabReader(filepath, chrom_size):
     
     # var_types is a dic keyed by var_type and valued by a list of genomic intervals
     var_types_ga = {}
+    var_types_id = {}
+    
     for _, line in infile.iterrows():
         var_type = str(line['var_type'])
         var_type = var_type.replace(" ","_")
         
         if var_type not in var_types_ga.keys():
             var_types_ga[var_type] = []
+            var_types_id[var_type] = []
        	
         chrom = 'chr'+ str(line['chr'])
+        accesion = line['#accession_num']
         if (chrom in chrom_size.keys()):
             start = inner_outer_pref(line, 'start')
             end = inner_outer_pref(line, 'stop')
@@ -42,15 +46,17 @@ def VariantCallTabReader(filepath, chrom_size):
             # Create a 'Genomic interval' from this variant call
             iv = HTSeq.GenomicInterval(chrom, start, end, ".")
             var_types_ga[var_type].append(iv)
-    return(var_types_ga)
+            var_types_id[var_type].append(accesion)
+    return((var_types_ga,var_types_id))
 
 
-def write_to_gvf(ga,var_type, outfile):
+def write_to_gvf(ga,nssd, var_type, outfile):
     """
     ga is the genomic array.
     """
     outfile = open(outfile, 'w')
     ivs = list(ga.steps())
+    ids = list(nssd.steps())
     num_iv = len(ivs)
     outline = '##gvf-version 1.00\n'
     outfile.write(outline)
@@ -65,7 +71,9 @@ def write_to_gvf(ga,var_type, outfile):
         end = ivs[i][0].end
         ID = str(i+1)
         count = ivs[i][1]
-        attributes = 'ID='+ID+';'+'count='+str(count)
+        SSV = ids[i][1]
+        attributes = 'ID='+ID+';'+'count='+str(count)+';'+'SSV='+str(SSV)
+        
         outline =chrom+'\t'+source+'\t'+var_type+'\t'+str(start)+'\t'+str(end)+'\t'+score+'\t'+strand+'\t'+phase+'\t'+attributes+'\n'
         outfile.write(outline)
     outfile.close()
@@ -92,12 +100,15 @@ def main(argv):
     chrom_size_file.close()
 
 
-    var_types_ga = VariantCallTabReader(opt.variantfile,chrom_size)
+    var_types_ga = VariantCallTabReader(opt.variantfile,chrom_size)[0]
+    var_types_id = VariantCallTabReader(opt.variantfile,chrom_size)[1]
     for var_type in var_types_ga.keys():  
         # Creat a 'Genomic Array' using HTSeq package
         ga = HTSeq.GenomicArray( chrom_size, stranded=False, typecode="i" )
+        nssd = HTSeq.GenomicArrayOfSets(chrom_size, stranded=False)
      
         variant_interval = var_types_ga[var_type]
+        variant_id = var_types_id[var_type]
 
         # Get the count of variant calls in each region
         variant_num = len(variant_interval)
@@ -106,6 +117,7 @@ def main(argv):
             iv = variant_interval[i]
             try:
                 ga[iv] += 1
+                nssd[iv] += variant_id[i]
             except:
                 iv.length == 0
 
@@ -113,7 +125,7 @@ def main(argv):
         ga.write_bedgraph_file(bedgraph, strand=".", track_options="")
     
         gvf = opt.outdir+'/VarType='+var_type+'_dbVar.gvf'
-        write_to_gvf(ga,var_type,gvf)
+        write_to_gvf(ga,nssd,var_type,gvf)
 
 if __name__ == "__main__":
     main(sys.argv)
