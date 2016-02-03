@@ -38,7 +38,7 @@ def VariantCallTabReader(filepath, chrom_size):
             var_types_id[var_type] = []
        	
         chrom = 'chr'+ str(line['chr'])
-        accesion = line['#accession_num']
+        accesion = line[0]
         if (chrom in chrom_size.keys()):
             start = inner_outer_pref(line, 'start')
             end = inner_outer_pref(line, 'stop')
@@ -48,7 +48,6 @@ def VariantCallTabReader(filepath, chrom_size):
             var_types_ga[var_type].append(iv)
             var_types_id[var_type].append(accesion)
     return((var_types_ga,var_types_id))
-
 
 def write_to_gvf(ga,nssd, var_type, outfile):
     """
@@ -124,7 +123,7 @@ def main(argv):
         bedgraph = opt.outdir+'/'+var_type+'_dbVar.bedgraph'
         ga.write_bedgraph_file(bedgraph, strand=".", track_options="")
     
-        gvf = opt.outdir+'/VarType='+var_type+'_dbVar.gvf'
+        gvf = opt.outdir+'/'+var_type+'_dbVar.gvf'
         write_to_gvf(ga,nssd,var_type,gvf)
 
 if __name__ == "__main__":
