@@ -1,12 +1,16 @@
 #!/usr/bin/env python
 
+dir_download_data = 'dbVar/' #directory to the data downloaded by download_data.py
+
 import os
 import gzip
 import glob
 import pickle
 from sys import argv
 
-database = glob.glob('/data/dbVar/Homo_Sapiens/by_study/*/tab/*variant_call.*.germline.tab.gz')
+#database = glob.glob('/data/dbVar/Homo_Sapiens/by_study/*/tab/*variant_call.*.germline.tab.gz')
+database = glob.glob(dir_download_data+'*')
+#print database
 
 def read_file(file1,save,save_all):
     file1 = gzip.open(file1)
