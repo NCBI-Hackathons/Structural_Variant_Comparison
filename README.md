@@ -30,3 +30,5 @@ Complete listing of all organisms available in dbVar and recent updates (http://
     https://docs.google.com/presentation/d/1n6WslYsnFPs74du63Y8hXgTj8PKH5b5V_QC9GqDH0Oo/edit?usp=sharing
 * Structural_Variant_Comparison wiki:
     https://github.com/NCBI-Hackathons/Structural_Variant_Comparison/wiki
+* Last updated:
+    April 4, 2016
