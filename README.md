@@ -17,16 +17,21 @@ The Hackathon team generated a non­redundant set of genomic regions called Stru
 One can easily compare these SVC data against other annotated genomic regions such as segmental duplications, clinically significant genes, dosage sensitive and/or essential regions, and problematic genomic regions that may yield suspected false variants. We also developed open-source utilities to: 1) search and filter SVC data in GVF format, 2) compute summary statistics and export data for genomic viewers, and 3) annotate SVCs using external data sources.
 
 **Installation and Test instructions:**
+
 https://github.com/NCBI-Hackathons/Structural_Variant_Comparison/wiki/Workflow-for-NCBI-Hackathon-~-Structural-Variant-Comparison:--Install-on-your-local-machine-and-Test
 
 **Data:**
+
 Human dbVar study input tab files based on GRCh38 
  ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/data/Homo_sapiens/by_study/
+ 
 Complete listing of all organisms available in dbVar and recent updates (http://www.ncbi.nlm.nih.gov/dbvar/content/ftp_manifest/) for input
+
 Precomputed SVC by study (January 2016)
  ftp://ftp.ncbi.nlm.nih.gov/pub/dbVar/sandbox/hackathon/January_2016/
  
 **More Info**
+
 * Presentation:
     https://docs.google.com/presentation/d/1n6WslYsnFPs74du63Y8hXgTj8PKH5b5V_QC9GqDH0Oo/edit?usp=sharing
 * Structural_Variant_Comparison wiki:
