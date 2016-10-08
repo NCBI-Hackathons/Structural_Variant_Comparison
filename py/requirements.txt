@@ -9,8 +9,8 @@ clyent==1.2.0
 cycler==0.9.0
 decorator==4.0.6
 funcsigs==0.4
-functools32==3.2.3.post2
-HTSeq===0.6.1p1
+functools32==3.2.3-2
+HTSeq==0.6.1p1
 ipykernel==4.2.2
 ipython==4.0.1
 ipython-genutils==0.1.0
