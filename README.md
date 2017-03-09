@@ -2,6 +2,8 @@
 
 Tools to compare structural variants to those in public databases! 
 
+Publication: https://f1000research.com/articles/5-673/v1
+
 #Introduction:
 
 NCBI’s dbVar database of large structural variation (https://www.ncbi.nlm.nih.gov/dbvar) contains over 3 million human submitted structural variants, including variants with clinical assertions from ClinVar. These data were submitted from over 120 human studies, including 1000 Genomes, and include copy number variants (CNVs), insertions, deletions, duplications, inversions, and translocations. This wealth of human SV data represents an important resource that can be used to help identify normal and causal variants among the millions of genomes that will be sequenced during the next few years in the fields of personal genomics, medical genetics, and variant discovery.
